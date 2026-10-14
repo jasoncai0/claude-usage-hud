@@ -1,0 +1,6 @@
+{
+  "name": "claude-usage-hud",
+  "description": "Usage HUD mod for Claude Code: rate-limit bars and reset countdown that render in the Desktop Code tab",
+  "owner": { "name": "jasoncai0" },
+  "plugins": [{ "name": "usage-hud", "source": "./", "description": "Rate-limit bars, reset countdown and cost above the prompt (Desktop + terminal)" }]
+}
