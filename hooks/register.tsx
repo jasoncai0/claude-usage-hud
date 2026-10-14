@@ -29,9 +29,10 @@ export const register: Register = on => {
     const u = await read($, usage)
     if (e.props.hasSurvey || !u) return next(e)
 
+    // No fresh rate-limit reading (new or long-idle session): show nothing rather than a lone cost.
     const rows = meters(u, await $.clock.now())
+    if (rows.length === 0) return next(e)
     const cost = costText(u)
-    if (rows.length === 0 && !cost) return next(e)
 
     const { Box, Text } = $.ui.resolve(e)
     return (

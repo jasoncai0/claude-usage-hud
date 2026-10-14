@@ -22,14 +22,20 @@ export const countdown = (resetsAt: string | undefined, now: number): string => 
   if (!resetsAt) return ''
   const ms = Date.parse(resetsAt) - now
   if (Number.isNaN(ms)) return ''
-  if (ms <= 0) return '即将重置'
   if (ms >= DAY) return `${Math.floor(ms / DAY)}天${Math.floor((ms % DAY) / HOUR)}时后重置`
   if (ms >= HOUR) return `${Math.floor(ms / HOUR)}时${Math.floor((ms % HOUR) / MINUTE)}分后重置`
   return `${Math.max(1, Math.floor(ms / MINUTE))}分后重置`
 }
 
+// A window whose reset time has passed is a stale reading (session idle since then): drop it.
+export const isFresh = (resetsAt: string | undefined, now: number): boolean => {
+  if (!resetsAt) return true
+  const t = Date.parse(resetsAt)
+  return Number.isNaN(t) || t > now
+}
+
 export const meters = (u: Usage, now: number): Meter[] =>
-  u.rateLimits.map(r => ({
+  u.rateLimits.filter(r => isFresh(r.resetsAt, now)).map(r => ({
     label: LABELS[r.kind] ?? r.kind,
     bar: bar(r.percentUsed),
     percent: `${Math.round(r.percentUsed)}%`,
