@@ -1,7 +1,7 @@
 {
   "name": "usage-hud",
-  "version": "0.2.1",
-  "description": "Rate-limit bars (5h / 7d), reset countdown and session cost above the prompt — works in the Claude Desktop Code tab",
+  "version": "0.3.0",
+  "description": "Rate-limit bars (5h / 7d) and reset countdown in the status line under the prompt — works in the Claude Desktop Code tab",
   "author": { "name": "jasoncai0" },
   "repository": "https://github.com/jasoncai0/claude-usage-hud",
   "license": "MIT",

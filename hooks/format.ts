@@ -1,30 +1,25 @@
 import type { Usage } from '../types'
 
 export type Level = 'success' | 'warning' | 'error'
-export type Meter = { label: string; bar: string; percent: string; reset: string; level: Level }
 
 const LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: '额度' }
-const BAR_CELLS = 10
+const LEVEL_DOT: Record<Level, string> = { success: '🟢', warning: '🟡', error: '🔴' }
+// Short enough that one window fits on one hover line next to the engine's name prefix.
+const BAR_CELLS = 6
 const WARN_AT = 70
 const DANGER_AT = 90
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
+// Desktop folds newlines into spaces and wraps the hover at a fixed width, so each window's segment is
+// glued with no-break spaces: the hover can only wrap between windows, one per line.
+const NBSP = ' '
 
 export const levelOf = (pct: number): Level => (pct >= DANGER_AT ? 'error' : pct >= WARN_AT ? 'warning' : 'success')
 
-export const bar = (pct: number): string => {
-  const filled = Math.min(BAR_CELLS, Math.max(0, Math.round((pct / 100) * BAR_CELLS)))
-  return '█'.repeat(filled) + '░'.repeat(BAR_CELLS - filled)
-}
-
-export const countdown = (resetsAt: string | undefined, now: number): string => {
-  if (!resetsAt) return ''
-  const ms = Date.parse(resetsAt) - now
-  if (Number.isNaN(ms)) return ''
-  if (ms >= DAY) return `${Math.floor(ms / DAY)}天${Math.floor((ms % DAY) / HOUR)}时后重置`
-  if (ms >= HOUR) return `${Math.floor(ms / HOUR)}时${Math.floor((ms % HOUR) / MINUTE)}分后重置`
-  return `${Math.max(1, Math.floor(ms / MINUTE))}分后重置`
+export const bar = (pct: number, cells = BAR_CELLS): string => {
+  const filled = Math.min(cells, Math.max(0, Math.round((pct / 100) * cells)))
+  return '█'.repeat(filled) + '░'.repeat(cells - filled)
 }
 
 // A window whose reset time has passed is a stale reading (session idle since then): drop it.
@@ -34,13 +29,25 @@ export const isFresh = (resetsAt: string | undefined, now: number): boolean => {
   return Number.isNaN(t) || t > now
 }
 
-export const meters = (u: Usage, now: number): Meter[] =>
-  u.rateLimits.filter(r => isFresh(r.resetsAt, now)).map(r => ({
-    label: LABELS[r.kind] ?? r.kind,
-    bar: bar(r.percentUsed),
-    percent: `${Math.round(r.percentUsed)}%`,
-    reset: countdown(r.resetsAt, now),
-    level: levelOf(r.percentUsed),
-  }))
+export const shortCountdown = (resetsAt: string | undefined, now: number): string => {
+  if (!resetsAt) return ''
+  const ms = Date.parse(resetsAt) - now
+  if (Number.isNaN(ms) || ms <= 0) return ''
+  if (ms >= DAY) return `${Math.floor(ms / DAY)}d${Math.floor((ms % DAY) / HOUR)}h`
+  if (ms >= HOUR) return `${Math.floor(ms / HOUR)}h${Math.floor((ms % HOUR) / MINUTE)}m`
+  return `${Math.max(1, Math.floor(ms / MINUTE))}m`
+}
 
-export const costText = (u: Usage): string => (u.costUsd === undefined ? '' : `$${u.costUsd.toFixed(2)}`)
+// The pinned status line; undefined (clears it) when no window has a fresh reading.
+export const statusLine = (u: Usage, now: number): string | undefined => {
+  const fresh = u.rateLimits.filter(r => isFresh(r.resetsAt, now))
+  if (fresh.length === 0) return undefined
+  return fresh
+    .map(r => {
+      const reset = shortCountdown(r.resetsAt, now)
+      return [LEVEL_DOT[levelOf(r.percentUsed)], LABELS[r.kind] ?? r.kind, bar(r.percentUsed), `${Math.round(r.percentUsed)}%`, reset && `↻${reset}`]
+        .filter(Boolean)
+        .join(NBSP)
+    })
+    .join('  ')
+}

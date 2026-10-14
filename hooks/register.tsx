@@ -1,15 +1,17 @@
-import { atom, read, update } from 'claude-code'
+import { atom, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Usage } from '../types'
-import { costText, meters } from './format'
+import { statusLine } from './format'
 
 const usage = atom({ plugin: 'usage-hud', key: 'usage' } as const, null)
 
+// Pinned status line under the prompt: sits beside the engine's own notices, replaces none of them.
 async function refresh($: EngineInterface) {
   const u = await $.session.usage()
-  const next: Usage = { rateLimits: u.rateLimits, costUsd: u.cost?.usd }
+  const next: Usage = { rateLimits: u.rateLimits }
   await update($, usage, () => next)
+  $.ui.status(statusLine(next, await $.clock.now()))
 }
 
 export const register: Register = on => {
@@ -22,31 +24,5 @@ export const register: Register = on => {
   on('session.measure', async ($, e, next) => {
     await refresh($)
     return next(e)
-  })
-
-  // ponytail: countdown refreshes only when the band redraws (each turn / measure); add a $.clock.every tick if a live clock matters
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const u = await read($, usage)
-    if (e.props.hasSurvey || !u) return next(e)
-
-    // No fresh rate-limit reading (new or long-idle session): show nothing rather than a lone cost.
-    const rows = meters(u, await $.clock.now())
-    if (rows.length === 0) return next(e)
-    const cost = costText(u)
-
-    const { Box, Text } = $.ui.resolve(e)
-    return (
-      <Box gap={3}>
-        {rows.map(m => (
-          <Box key={m.label} gap={1}>
-            <Text bold>{m.label}</Text>
-            <Text color={m.level}>{m.bar}</Text>
-            <Text color={m.level} bold>{m.percent}</Text>
-            {m.reset ? <Text dimColor>{m.reset}</Text> : null}
-          </Box>
-        ))}
-        {cost ? <Text dimColor>{cost}</Text> : null}
-      </Box>
-    )
   })
 }
