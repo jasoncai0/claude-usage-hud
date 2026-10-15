@@ -1,16 +1,15 @@
 # usage-hud
 
-A Claude Code mod that shows your subscription rate-limit usage in the status line **under the prompt** — in the **Claude Desktop Code tab** as well as the terminal (statusLine-based HUDs don't render in Desktop). It sits beside Claude's own notices and replaces none of them.
+A Claude Code mod that shows your subscription rate-limit usage in a row **above the prompt** — in the **Claude Desktop Code tab** as well as the terminal (statusLine-based HUDs don't render in Desktop).
 
 ```
-🟢 5h █░░░░░ 8% ↻3h30m  🟢 7d █░░░░░ 9% ↻3d10h
+5h ██░░░░ 10% ↻3h20m   7d █░░░░░ 9% ↻3d10h
 ```
 
-- 6-cell bar per rate-limit window (`5h`, `7d`, gateway spend limit)
-- 🟢 < 70%, 🟡 70–90%, 🔴 ≥ 90%
+- 6-cell bar per rate-limit window (`5h`, `7d`, gateway spend limit), colored green < 70%, yellow 70–90%, red ≥ 90%
 - Countdown to reset; windows whose reset already passed (idle session) are hidden
-- Nothing shown until a fresh rate-limit reading exists
-- Hover (when truncated) wraps one window per line
+- Nothing drawn until a fresh rate-limit reading exists
+- Shares the band: its row stacks on top of whatever other plugins draw there, never replaces it, and yields to surveys
 - Pushed by the `session.measure` event — no polling, no extra tokens
 
 ## Install

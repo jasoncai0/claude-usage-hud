@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { bar, isFresh, levelOf, shortCountdown, statusLine } from './format'
+import { bar, isFresh, levelOf, meters, shortCountdown } from './format'
 
 const NOW = Date.parse('2026-10-14T10:00:00Z')
 
@@ -32,16 +32,19 @@ test('isFresh keeps windows without a usable reset time', () => {
   expect(isFresh('2026-10-14T10:00:00Z', NOW)).toBe(false)
 })
 
-test('statusLine glues each window with no-break spaces', () => {
-  const line = statusLine(
+test('meters maps each fresh window', () => {
+  const rows = meters(
     { rateLimits: [{ kind: 'five_hour', percentUsed: 92, resetsAt: '2026-10-14T11:00:00Z' }, { kind: 'seven_day', percentUsed: 7 }] },
     NOW,
   )
-  expect(line).toBe('🔴 5h ██████ 92% ↻1h0m  🟢 7d ░░░░░░ 7%')
+  expect(rows).toEqual([
+    { label: '5h', bar: '██████', percent: '92%', reset: '↻1h0m', level: 'error' },
+    { label: '7d', bar: '░░░░░░', percent: '7%', reset: '', level: 'success' },
+  ])
 })
 
-test('statusLine drops stale windows and clears when none are fresh', () => {
+test('meters drops stale windows and is empty when none are fresh', () => {
   const rows = { rateLimits: [{ kind: 'five_hour', percentUsed: 80, resetsAt: '2026-10-14T09:00:00Z' }, { kind: 'seven_day', percentUsed: 12, resetsAt: '2026-10-18T00:00:00Z' }] }
-  expect(statusLine(rows, NOW)).toBe('🟢 7d █░░░░░ 12% ↻3d14h')
-  expect(statusLine({ rateLimits: [] }, NOW)).toBeUndefined()
+  expect(meters(rows, NOW).map(m => m.label)).toEqual(['7d'])
+  expect(meters({ rateLimits: [] }, NOW)).toEqual([])
 })

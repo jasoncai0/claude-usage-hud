@@ -3,8 +3,6 @@ import type { Usage } from '../types'
 export type Level = 'success' | 'warning' | 'error'
 
 const LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: '额度' }
-const LEVEL_DOT: Record<Level, string> = { success: '🟢', warning: '🟡', error: '🔴' }
-// Short enough that one window fits on one hover line next to the engine's name prefix.
 const BAR_CELLS = 6
 const WARN_AT = 70
 const DANGER_AT = 90
@@ -38,16 +36,19 @@ export const shortCountdown = (resetsAt: string | undefined, now: number): strin
   return `${Math.max(1, Math.floor(ms / MINUTE))}m`
 }
 
-// The pinned status line; undefined (clears it) when no window has a fresh reading.
-export const statusLine = (u: Usage, now: number): string | undefined => {
-  const fresh = u.rateLimits.filter(r => isFresh(r.resetsAt, now))
-  if (fresh.length === 0) return undefined
-  return fresh
+export type Meter = { label: string; bar: string; percent: string; reset: string; level: Level }
+
+// One meter per window with a fresh reading; empty means draw nothing.
+export const meters = (u: Usage, now: number): Meter[] =>
+  u.rateLimits
+    .filter(r => isFresh(r.resetsAt, now))
     .map(r => {
       const reset = shortCountdown(r.resetsAt, now)
-      return [LEVEL_DOT[levelOf(r.percentUsed)], LABELS[r.kind] ?? r.kind, bar(r.percentUsed), `${Math.round(r.percentUsed)}%`, reset && `↻${reset}`]
-        .filter(Boolean)
-        .join(NBSP)
+      return {
+        label: LABELS[r.kind] ?? r.kind,
+        bar: bar(r.percentUsed),
+        percent: `${Math.round(r.percentUsed)}%`,
+        reset: reset && `↻${reset}`,
+        level: levelOf(r.percentUsed),
+      }
     })
-    .join('  ')
-}
